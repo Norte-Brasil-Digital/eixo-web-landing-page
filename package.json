@@ -1,0 +1,16 @@
+{
+  "name": "eixo-web-landing",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Landing page Eixo Web com formulário integrado ao Evo CRM por Netlify Function.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test qa/*.test.mjs",
+    "check:static": "python3 qa/static-inline-check.py --ready",
+    "check:syntax": "node --check site/lead-form.mjs && node --check site/lead-validation.mjs && node --check site/evo-integration.mjs && node --check netlify/functions/eixo-lead.mjs",
+    "check": "npm test && npm run check:static && npm run check:syntax",
+    "preview": "python3 -m http.server 4173 --bind 127.0.0.1 --directory site"
+  }
+}

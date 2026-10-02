@@ -1,0 +1,30 @@
+# Segredos e estado local
+.env
+.env.*
+!.env.example
+.netlify/
+**/.netlify/
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Dependências e caches
+node_modules/
+tools/
+__pycache__/
+*.py[cod]
+.DS_Store
+
+# Resultados locais, revisões e cópias antigas
+*.log
+coverage/
+qa/*report*.json
+qa/*results*.txt
+qa/live-deployment-result.json
+review/
+local-inline-backup/
+library-helpers/
+*-request.json
+*-result.json
+*.zip

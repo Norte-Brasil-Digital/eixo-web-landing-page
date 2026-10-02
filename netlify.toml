@@ -1,0 +1,7 @@
+[build]
+  publish = "site"
+  command = "node --test qa/*.test.mjs"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
