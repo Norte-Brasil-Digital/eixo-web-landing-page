@@ -4,7 +4,7 @@ from urllib.parse import urlsplit, parse_qs
 import json, datetime, re, sys
 root=Path(__file__).resolve().parents[1]; site=root/'site'
 ready='--ready' in sys.argv
-html=(site/'index.html').read_text(); css=(site/'styles.css').read_text(); js=(site/'lead-form.mjs').read_text(); adapter=(site/'evo-integration.mjs').read_text(); headers=(site/'_headers').read_text()
+html=(site/'index.html').read_text(encoding='utf-8'); css=(site/'styles.css').read_text(encoding='utf-8'); js=(site/'lead-form.mjs').read_text(encoding='utf-8'); adapter=(site/'evo-integration.mjs').read_text(encoding='utf-8'); headers=(site/'_headers').read_text(encoding='utf-8')
 class Parser(HTMLParser):
  def __init__(self): super().__init__(); self.tags=[]
  def handle_starttag(self,tag,attrs): self.tags.append((tag,dict(attrs)))
@@ -29,12 +29,12 @@ check('CSP allows only the approved connection scope and blocks native posts',"s
 check('Visible focus, reduced motion and mobile rules',all(x in css for x in [':focus-visible','prefers-reduced-motion:reduce','max-width:480px','max-width:780px']))
 check('ARIA loading and live/error feedback exist','aria-busy' in js and any(a.get('role')=='status' for t,a in tags) and any(a.get('role')=='alert' for t,a in tags))
 check('Submission guarded against duplicate/pending/uncertain state','if (busy || completed || uncertain) return' in js and 'response?.confirmed !== true' in js)
-check('Review noindex stays in all three locations','noindex, nofollow' in html and 'X-Robots-Tag: noindex, nofollow' in headers and 'Disallow: /' in (site/'robots.txt').read_text())
+check('Review noindex stays in all three locations','noindex, nofollow' in html and 'X-Robots-Tag: noindex, nofollow' in headers and 'Disallow: /' in (site/'robots.txt').read_text(encoding='utf-8'))
 wa=next(a['href'] for a in links if 'data-whatsapp' in a); parsed=urlsplit(wa)
 check('Verified WhatsApp alternative preserved',parsed.netloc=='wa.me' and parsed.path=='/5594991636639' and parse_qs(parsed.query)['text']==['Olá, Fabio! Quero conhecer o Eixo Web para minha oficina.'])
 check('Fallback to original CRM form preserved',any(a.get('href')=='https://chat.slsistemas.com.br/f/bbba0fbf-ff08-4f3d-9df7-56856c8a9a12' for a in links))
 check('Data destination disclosure includes Netlify and actual CRM API','Netlify' in html and 'chatapi.slsistemas.com.br' in html and 'não salva o conteúdo dos campos no navegador' in html)
-check('Function directory configured but live sending still requires explicit server flag', 'directory = "netlify/functions"' in (root/'netlify.toml').read_text() and "env.EIXO_LEADS_ENABLED !== 'true'" in (root/'netlify/functions/eixo-lead.mjs').read_text())
+check('Function directory configured but live sending still requires explicit server flag', 'directory = "netlify/functions"' in (root/'netlify.toml').read_text(encoding='utf-8') and "env.EIXO_LEADS_ENABLED !== 'true'" in (root/'netlify/functions/eixo-lead.mjs').read_text(encoding='utf-8'))
 report = {
  'checkedAtUTC': datetime.datetime.now(datetime.timezone.utc).isoformat(),
  'expectedSourceMode': 'active' if ready else 'inactive',

@@ -7,7 +7,7 @@ import { SubmissionError } from '../site/evo-integration.mjs';
 
 // Offline controller tests with minimal DOM doubles. These establish state
 // transitions, not browser rendering, accessibility tooling or CRM receipt.
-const source = (await readFile(new URL('../site/lead-form.mjs', import.meta.url), 'utf8')).replace(/^import .*;\n/gm, '');
+const source = (await readFile(new URL('../site/lead-form.mjs', import.meta.url), 'utf8')).replace(/^import .*;\r?\n/gm, '');
 function element() {
   return { value: '', textContent: '', hidden: false, disabled: false, attrs: {}, listeners: {}, dataset: {},
     setAttribute(name, value) { this.attrs[name] = value; },
