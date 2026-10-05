@@ -12,8 +12,10 @@ const env = { EIXO_LEADS_ENABLED: 'true', EVO_API_ACCESS_TOKEN: 'offline-test-fi
 const request = (body = values, headers = {}) => new Request(`${origin}/api/eixo-lead`, { method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json', ...headers }, body: typeof body === 'string' ? body : JSON.stringify(body) });
 function harness(override = {}) {
   const calls = [];
+  const diagnostics = [];
   const run = createHandler({
     environment: () => ({ ...env, ...override.env }),
+    reportDestinationFailure: code => diagnostics.push(code),
     requestUpstream: async (url, options) => {
       calls.push({ url, options });
       if (url === pipelineUrl) return new Response(JSON.stringify(override.lookupBody ?? destinationEnvelope()), { status: override.lookupStatus ?? 200 });
@@ -21,7 +23,7 @@ function harness(override = {}) {
       return new Response(JSON.stringify(override.body ?? { success: true, lead_id: 123, deal_id: 456 }), { status: override.status ?? 201 });
     },
   });
-  return { run, calls };
+  return { run, calls, diagnostics };
 }
 
 test('handler stays disabled with default or incomplete configuration', async () => {
@@ -97,7 +99,7 @@ test('payload uses fixed authenticated endpoint, configured destination and E.16
   assert.equal(h.calls[0].options.method, 'GET');
   const { url, options } = h.calls[1];
   assert.equal(url, upstreamUrl);
-  assert.equal(url, 'https://chatapi.slsistemas.com.br/public/api/v1/leads');
+  assert.equal(url, 'https://chat.slsistemas.com.br/public/api/v1/leads');
   assert.equal(options.headers.api_access_token, env.EVO_API_ACCESS_TOKEN);
   assert.equal(options.redirect, 'error');
   assert.equal(options.method, 'POST');
@@ -176,6 +178,34 @@ test('failed or ambiguous read-only lookup never creates a lead or leaks names',
     assert.equal(JSON.stringify(body).includes('Vendas'), false);
     assert.equal(h.calls.filter(call => call.url === upstreamUrl).length, 0);
   }
+});
+
+test('destination diagnostics distinguish failures without recording secrets or creating leads', async () => {
+  for (const [override, expected] of [
+    [{ lookupStatus: 401 }, 'lookup_unauthorized'],
+    [{ lookupStatus: 403 }, 'lookup_forbidden'],
+    [{ lookupStatus: 429 }, 'lookup_rate_limited'],
+    [{ lookupStatus: 500 }, 'lookup_http_error'],
+    [{ lookupBody: { success: false, error: env.EVO_API_ACCESS_TOKEN, email: values.email } }, 'unexpected_schema'],
+    [{ lookupBody: { success: true, data: [], meta: {} } }, 'pipeline_missing_or_ambiguous'],
+  ]) {
+    const h = harness(override);
+    const response = await h.run(request());
+    assert.equal(response.status, 503);
+    assert.deepEqual(h.diagnostics, [expected]);
+    assert.equal(h.calls.length, 1);
+    assert.equal(h.calls[0].options.method, 'GET');
+    const output = JSON.stringify(h.diagnostics) + await response.text();
+    for (const secret of [env.EVO_API_ACCESS_TOKEN, values.email, values.phone, env.EVO_PIPELINE_NAME]) {
+      assert.equal(output.includes(secret), false);
+    }
+  }
+  const confirmed = harness();
+  await confirmed.run(request());
+  assert.deepEqual(confirmed.diagnostics, []);
+  const uncertain = harness({ throw: true });
+  await uncertain.run(request());
+  assert.deepEqual(uncertain.diagnostics, []);
 });
 
 test('cache retains only resolved destinations for at most five minutes', async () => {

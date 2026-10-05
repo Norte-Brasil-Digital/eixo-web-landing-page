@@ -5,8 +5,8 @@ import { validateLead, phoneToE164 } from '../../site/lead-validation.mjs';
 // and a real test submission have been explicitly approved.
 // Credentials must be entered by the owner in Netlify's secure settings,
 // Functions scope. Never put credentials in a frontend file or this source.
-export const upstreamUrl = 'https://chatapi.slsistemas.com.br/public/api/v1/leads';
-export const pipelineUrl = 'https://chatapi.slsistemas.com.br/api/v1/pipelines';
+export const upstreamUrl = 'https://chat.slsistemas.com.br/public/api/v1/leads';
+export const pipelineUrl = 'https://chat.slsistemas.com.br/api/v1/pipelines';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 const MAX_BODY_BYTES = 4096;
 const ALLOWED_FIELDS = new Set(['name', 'email', 'phone', 'company']);
@@ -142,7 +142,7 @@ export function selectDestination(body, pipelineName, stageName) {
   return { pipelineId: pipeline.id, stageId: stage.id };
 }
 
-export function createHandler({ environment = () => process.env, requestUpstream = fetch, now = Date.now } = {}) {
+export function createHandler({ environment = () => process.env, requestUpstream = fetch, now = Date.now, reportDestinationFailure = code => console.warn(`eixo_lead_destination:${code}`) } = {}) {
   // Cache only the resolved UUIDs and a one-way configuration fingerprint.
   // No lists, personal data, token or response body are retained here.
   let cached = null;
@@ -155,8 +155,13 @@ export function createHandler({ environment = () => process.env, requestUpstream
       headers: { Accept: 'application/json', api_access_token: settings.key },
       redirect: 'error', signal,
     });
-    if (response.status !== 200) throw new Error('Pipeline lookup unavailable');
-    const body = await response.json();
+    if (response.status !== 200) {
+      const code = response.status === 401 ? 'lookup_unauthorized'
+        : response.status === 403 ? 'lookup_forbidden'
+          : response.status === 429 ? 'lookup_rate_limited' : 'lookup_http_error';
+      throw new DestinationError(code);
+    }
+    const body = await response.json().catch(() => { throw new DestinationError('lookup_invalid_json'); });
     const destination = selectDestination(body, settings.pipelineName, settings.stageName);
     cached = { fingerprint, destination, expires: now() + 300000 };
     return destination;
@@ -228,8 +233,15 @@ export function createHandler({ environment = () => process.env, requestUpstream
         return rejected(503, 'service_unavailable', 'O envio está indisponível no momento. Use o formulário de atendimento ou o WhatsApp.');
       }
       return uncertain();
-    } catch {
+    } catch (error) {
       cached = null;
+      if (!postAttempted) {
+        // Only our fixed enum is reported. Never log the exception, response,
+        // credential, configuration names or contact data.
+        const code = error instanceof DestinationError ? error.code
+          : controller.signal.aborted ? 'lookup_timeout' : 'lookup_network_error';
+        try { reportDestinationFailure(code); } catch { /* Logging must not change receipt semantics. */ }
+      }
       return postAttempted ? uncertain() : rejected(503, 'destination_unavailable', 'O atendimento está indisponível no momento. Use o formulário de atendimento ou o WhatsApp.');
     } finally {
       clearTimeout(timeout);
