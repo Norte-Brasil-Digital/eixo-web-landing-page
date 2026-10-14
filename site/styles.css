@@ -155,3 +155,5 @@ button,input{font:inherit}button:focus-visible,input:focus-visible{outline:3px s
 }
 @media(max-width:360px){.lead-panel{padding:22px 18px}.lead-heading h3{font-size:1.18rem}}
 @media(prefers-reduced-motion:reduce){.submit-spinner{animation:none}}
+
+.nbd-form-frame { display: block; width: 100%; min-height: 640px; border: 0; }
