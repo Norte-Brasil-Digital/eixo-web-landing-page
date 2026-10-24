@@ -320,3 +320,12 @@ a:focus-visible,summary:focus-visible,.btn:focus-visible{outline:3px solid var(-
   *,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
   .js .reveal{opacity:1;transform:none}
 }
+
+/* Política de privacidade */
+.legal-body{max-width:760px}
+.legal-body h1{font-size:clamp(1.8rem,4vw,2.4rem);margin:0 0 .5rem}
+.legal-body h2{font-size:1.2rem;margin:2rem 0 .6rem}
+.legal-body p,.legal-body li{line-height:1.7}
+.legal-body ul{padding-left:1.2rem}
+.legal-updated{opacity:.75;font-size:.9rem}
+.footer-bottom a+a{margin-left:1rem}

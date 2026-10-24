@@ -1,2 +1,4 @@
 User-agent: *
-Disallow: /
+Allow: /
+
+Sitemap: https://eixoweb.nortebrasildigital.com.br/sitemap.xml
