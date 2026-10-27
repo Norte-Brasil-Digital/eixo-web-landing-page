@@ -32,6 +32,17 @@ if ('IntersectionObserver' in window) {
   }, { threshold: 0.05 });
   if (hero) watcher.observe(hero);
   if (contact) watcher.observe(contact);
+
+  // Vídeo de demonstração: só baixa e toca quando aparece na tela (sem áudio); pausa ao sair.
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const player = new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      const video = entry.target;
+      if (entry.isIntersecting) video.play().catch(() => {});
+      else video.pause();
+    }
+  }, { threshold: 0.4 });
+  if (!reduceMotion) document.querySelectorAll('video[data-autoplay]').forEach((v) => player.observe(v));
 } else {
   document.querySelectorAll('.reveal').forEach((el) => el.classList.add('is-visible'));
   mobileCta?.classList.add('is-visible');
